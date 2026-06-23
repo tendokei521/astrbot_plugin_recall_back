@@ -55,7 +55,6 @@ class RecallBackHandler:
         """根据事件类型分发到存储或撤回处理。"""
         msg_obj = event.message_obj
         raw = getattr(msg_obj, "raw_message", None)
-        print(event.message_obj.raw_message)
         if raw is None:
             return
         post_type = raw.post_type
