@@ -1,0 +1,9 @@
+name: astrbot_plugin_recall_back
+display_name: 防撤回插件
+desc: 自动备份并恢复被撤回的消息。
+version: v0.1.2
+author: TendoKei_521
+repo: https://github.com/tendokei521/astrbot_plugin_recall_back
+support_platforms:
+  - aiocqhttp
+priority: 0

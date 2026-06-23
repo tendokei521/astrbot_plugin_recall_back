@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>防撤回配置</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <div class="header-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+      </div>
+      <div>
+        <h1>防撤回</h1>
+        <p class="header-sub">自动备份消息，在被撤回时恢复到指定位置</p>
+      </div>
+    </header>
+
+    <!-- 加载 / 错误 -->
+    <div id="loading" class="loading-box">正在加载配置...</div>
+    <div id="error" class="error-box" style="display:none"></div>
+
+    <!-- 主表单 -->
+    <div id="mainForm" style="display:none">
+
+      <!-- 卡片1：监听设置 -->
+      <section class="card">
+        <h2 class="card-title">监听设置</h2>
+        <p class="card-desc">控制哪些消息类型会被记录</p>
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <span class="toggle-name">监听群聊消息</span>
+            <span class="toggle-hint">记录群聊中的消息以便恢复</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableGroupListen" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <span class="toggle-name">监听私聊消息</span>
+            <span class="toggle-hint">记录私聊中的消息以便恢复</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enablePrivateListen" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <span class="toggle-name">解析合并转发消息</span>
+            <span class="toggle-hint">展开合并转发中的嵌套内容</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableParseForward" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 卡片2：消息存储设置 -->
+      <section class="card">
+        <h2 class="card-title">消息存储</h2>
+        <p class="card-desc">控制消息的保存时长和清理策略</p>
+        <div class="form-row">
+          <div class="form-group form-group-inline">
+            <label class="form-label" for="messageRetentionMinutes">记录时长（分钟）</label>
+            <input type="number" id="messageRetentionMinutes" class="input-inline" min="1" max="1440" value="10">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="limitMode">消息上限模式</label>
+          <select id="limitMode" class="select-native">
+            <option value="disabled">不启用</option>
+            <option value="session">按会话</option>
+            <option value="total">按总条数</option>
+          </select>
+        </div>
+        <div class="form-row" id="sessionLimitGroup" style="display:none">
+          <div class="form-group form-group-inline">
+            <label class="form-label" for="maxMessagesPerSession">单会话上限</label>
+            <input type="number" id="maxMessagesPerSession" class="input-inline" min="1" max="10000" value="200">
+            <span class="form-hint">每个群/私聊最多缓存条数</span>
+          </div>
+        </div>
+        <div class="form-row" id="totalLimitGroup" style="display:none">
+          <div class="form-group form-group-inline">
+            <label class="form-label" for="maxTotalMessages">总上限</label>
+            <input type="number" id="maxTotalMessages" class="input-inline" min="1" max="100000" value="5000">
+            <span class="form-hint">全局最多缓存条数</span>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <span class="toggle-name">消息过期时删除</span>
+            <span class="toggle-hint">到达记录时长后自动清理本地数据</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableExpireDelete" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <span class="toggle-name">撤回恢复后删除</span>
+            <span class="toggle-hint">消息已被成功恢复后从本地删除</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableRecalledDelete" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 卡片3：转发到群聊 -->
+      <section class="card">
+        <div class="card-title-row">
+          <div>
+            <h2 class="card-title">转发到群聊</h2>
+            <p class="card-desc">将撤回的消息转发到指定的群</p>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="collapse-toggle" id="recallGroupCollapseBtn" title="折叠/展开">
+              <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <button id="refreshBtn" class="btn btn-outline" title="重新获取群列表">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+              刷新列表
+            </button>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <span class="toggle-name">启用群聊转发</span>
+            <span class="toggle-hint">检测到撤回时转发到勾选的群</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableForwardToGroup">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="group-list-container" id="groupListContainer">
+          <div class="group-list-header">
+            <span class="col-index">#</span>
+            <span class="col-info">群信息</span>
+            <span class="col-toggle">转发</span>
+          </div>
+          <div class="group-list-body" id="groupList">
+            <div class="group-empty">暂无群数据，请点击"刷新列表"获取</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 卡片4：转发到私聊 -->
+      <section class="card">
+        <div class="card-title-row">
+          <div>
+            <h2 class="card-title">转发到私聊</h2>
+            <p class="card-desc">将撤回的消息转发到指定的好友</p>
+          </div>
+          <div class="card-actions">
+            <button type="button" class="collapse-toggle" id="recallFriendCollapseBtn" title="折叠/展开">
+              <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <button id="refreshFriendsBtn" class="btn btn-outline" title="重新获取好友列表">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+              刷新列表
+            </button>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <span class="toggle-name">启用私聊转发</span>
+            <span class="toggle-hint">检测到撤回时转发到勾选的好友</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableForwardToPrivate">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="group-list-container" id="friendListContainer">
+          <div class="group-list-header">
+            <span class="col-index">#</span>
+            <span class="col-info">好友信息</span>
+            <span class="col-toggle">转发</span>
+          </div>
+          <div class="group-list-body" id="friendList">
+            <div class="group-empty">暂无好友数据，请点击刷新</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 卡片5：合并转发 -->
+      <section class="card">
+        <h2 class="card-title">合并转发</h2>
+        <p class="card-desc">控制转发消息的格式</p>
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <span class="toggle-name">使用合并转发</span>
+            <span class="toggle-hint">启用时，撤回通知与消息体会在同一个合并转发消息体</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableMergeForward" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 保存按钮 -->
+      <div class="save-bar">
+        <span id="saveStatus" class="save-status"></span>
+        <button id="saveBtn" class="btn btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          保存配置
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/api/plugin/page/bridge-sdk.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
